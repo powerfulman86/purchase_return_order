@@ -34,12 +34,14 @@
                         <button name="action_confirm"
                                 string="Confirm" type="object"
                                 attrs="{'invisible': [('state', 'not in', ['draft'])]}"/>
-                        <button name="action_cancel" attrs="{'invisible': [('refund_done', '=', True)]}" type="object" string="Cancel"/>
+                        <button name="action_cancel" attrs="{'invisible': [('refund_done', '=', True)]}" type="object"
+                                string="Cancel"/>
                         <field name="refund_done" invisible="1"/>
                         <button name="action_view_receipt" type="object" string="receive products"
                                 attrs="{'invisible': [('state', 'in', ['draft'])]}"/>
                         <button name="create_refund" type="object"
-                                attrs="{'invisible': ['|',('refund_done', '=', True),('state', '=', 'draft')]}" string="Create Refund"/>
+                                attrs="{'invisible': ['|',('refund_done', '=', True),('state', '=', 'draft')]}"
+                                string="Create Refund"/>
                         <button name="action_draft" states="cancel" type="object" string="Set to Request"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,sent,sale"/>
                     </header>
@@ -69,18 +71,16 @@
                         </div>
                         <group>
                             <group>
-                                <field name="purchase_id" />
-                                <field name="partner_id" />
-<!--                                <field name="partner_invoice_id" groups="sale.group_delivery_invoice_address"-->
-<!--                                       context="{'default_type':'invoice'}" options='{"always_reload": True}'/>-->
-<!--                                <field name="partner_shipping_id" groups="sale.group_delivery_invoice_address"-->
-<!--                                       context="{'default_type':'delivery'}" options='{"always_reload": True}'/>-->
+                                <field name="purchase_id"/>
+                                <field name="partner_id"/>
+                                <!--                                <field name="partner_invoice_id" groups="sale.group_delivery_invoice_address"-->
+                                <!--                                       context="{'default_type':'invoice'}" options='{"always_reload": True}'/>-->
+                                <!--                                <field name="partner_shipping_id" groups="sale.group_delivery_invoice_address"-->
+                                <!--                                       context="{'default_type':'delivery'}" options='{"always_reload": True}'/>-->
                             </group>
                             <group>
-                                <div class="o_td_label" groups="base.group_no_one"
-                                     attrs="{'invisible': [('state', 'in', ['return', 'done', 'cancel'])]}">
-                                    <label for="date_order" string="Request Date"/>
-                                </div>
+                                <field name="date_order"/>
+                                <field name="company_id"/>
                             </group>
                         </group>
                         <notebook>
@@ -207,7 +207,7 @@
                                                             </div>
                                                         </div>
                                                     </t>
-                                                 </div>
+                                                </div>
                                             </t>
                                         </templates>
                                     </kanban>
@@ -217,8 +217,8 @@
                                         <field name="note" nolabel="1" placeholder="Terms and conditions..."/>
                                     </group>
                                     <group class="oe_subtotal_footer oe_right" colspan="2" name="sale_total">
-<!--                                        <field name="amount_untaxed" widget='monetary'/>-->
-<!--                                        <field name="amount_tax" widget='monetary'/>-->
+                                        <!--                                        <field name="amount_untaxed" widget='monetary'/>-->
+                                        <!--                                        <field name="amount_tax" widget='monetary'/>-->
                                         <div class="oe_subtotal_footer_separator oe_inline o_td_label">
                                             <label for="amount_total"/>
                                         </div>
@@ -229,11 +229,9 @@
                             </page>
                             <page string="Other Info" name="other_information">
                                 <group>
-                                    <group name="sales_person" string="Return ">
-                                        <field name="picking_type_id"/>
-                                        <field name="user_id"/>
-                                        <field name="company_id" options="{'no_create': True}"
-                                               groups="base.group_multi_company"/>
+                                    <group name="return_group" string="Return ">
+                                        <!--    <field name="picking_type_id"/> -->
+                                        <field name="warehouse_id"/>
                                         <field name="reference" readonly="1"
                                                attrs="{'invisible': [('reference', '=', False)]}"/>
                                         <field name="client_order_ref"/>
@@ -278,13 +276,14 @@
                 <p class="o_view_nocontent_smiling_face">
                     Create a new quotation, the first step of a new return!
                 </p><p>
-                Once the quotation is confirmed, it becomes a Sales Return.<br/> You will be able to create                note
+                Once the quotation is confirmed, it becomes a Sales Return.<br/> You will be able to create note
                 refund the payment.
             </p>
             </field>
         </record>
 
-        <menuitem id="return_purchase_quotation_menu" name="Purchase Return request" parent="purchase.menu_procurement_management"
+        <menuitem id="return_purchase_quotation_menu" name="Purchase Return request"
+                  parent="purchase.menu_procurement_management"
                   action="action_quotations_purchase_return" sequence="98"/>
         <menuitem id="return_purchase_order_menu" name="Purchase Return" parent="purchase.menu_procurement_management"
                   action="action_purchase_return_orders" sequence="99"/>

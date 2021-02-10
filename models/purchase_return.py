@@ -82,12 +82,11 @@ class PurchaseReturn(models.Model):
     company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
     date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]}, )
 
-
     @api.onchange('purchase_id')
     def change_purchase_id(self):
         lines = []
         self.partner_id = self.purchase_id.partner_id.id
-        self.picking_type_id = self.purchase_id.picking_type_id.id
+        self.warehouse_id = self.purchase_id.picking_type_id.warehouse_id.id
         self.user_id = self.purchase_id.user_id.id
         self.company_id = self.purchase_id.company_id.id
         self.date_order = self.purchase_id.date_order
@@ -103,17 +102,6 @@ class PurchaseReturn(models.Model):
         print(lines)
         self.order_line = None
         self.order_line = lines
-        #
-        # lines = []
-        # for val in self.purchase_order_id.order_line:
-        #     lines.append((0, 0,
-        #                   {   'product_id': val.product_id.id, 'qty': val.product_uom_qty }
-        #                   ))
-        #
-        # self.delivery_order_lines = None
-        # self.delivery_order_lines = lines
-
-        # self.order_line = lines
 
     def create_refund(self):
         self.ensure_one()
@@ -121,7 +109,7 @@ class PurchaseReturn(models.Model):
 
         if not journal:
             raise UserError(_('Please define an accounting purchases journal for the company %s (%s).') % (
-            self.company_id.name, self.company_id.id))
+                self.company_id.name, self.company_id.id))
 
         lines = []
         for order_line in self.order_line:
@@ -172,6 +160,17 @@ class PurchaseReturn(models.Model):
         required=True, readonly=True, states={'draft': [('readonly', False)]},
         default=_default_picking_type_id)
 
+    @api.model
+    def _default_warehouse_id(self):
+        company = self.env.user.company_id.id
+        warehouse_ids = self.env['stock.warehouse'].search([], limit=1)
+        return warehouse_ids
+
+    warehouse_id = fields.Many2one(
+        'stock.warehouse', string='Warehouse',
+        required=True, readonly=True, states={'draft': [('readonly', False)]},
+        default=_default_warehouse_id)
+
     picking_ids = fields.One2many('stock.picking', 'purchase_return_id', string='Transfers')
     move_ids = fields.One2many('account.move', 'purchase_return_id', string='Credit')
 
@@ -199,7 +198,8 @@ class PurchaseReturn(models.Model):
                 vals['name'] = self.env['ir.sequence'].with_context(force_company=vals['company_id']).next_by_code(
                     'purchase.return', sequence_date=seq_date) or _('New')
             else:
-                vals['name'] = self.env['ir.sequence'].next_by_code('purchase.return', sequence_date=seq_date) or _('New')
+                vals['name'] = self.env['ir.sequence'].next_by_code('purchase.return', sequence_date=seq_date) or _(
+                    'New')
 
         result = super(PurchaseReturn, self).create(vals)
         return result
@@ -228,7 +228,7 @@ class PurchaseReturn(models.Model):
             order_ids = self._search(domain, limit=limit, access_rights_uid=name_get_uid)
             return models.lazy_name_get(self.browse(order_ids).with_user(name_get_uid))
         return super(PurchaseReturn, self)._name_search(name, args=args, operator=operator, limit=limit,
-                                                    name_get_uid=name_get_uid)
+                                                        name_get_uid=name_get_uid)
 
     def action_view_invoice(self):
         invoices = self.mapped('invoice_ids')
@@ -289,7 +289,7 @@ class PurchaseReturn(models.Model):
     def action_confirm(self):
         self.write({
             'state': 'return',
-            'date_order': fields.Datetime.now() })
+            'date_order': fields.Datetime.now()})
         self._action_confirm()
         return True
 
@@ -302,8 +302,8 @@ class PurchaseReturn(models.Model):
             'partner_id': self.partner_id.id,
             'origin': self.name,
             'scheduled_date': fields.Date.today(),
-            'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'incoming')])[0].id,
-            'location_dest_id': self.picking_type_id.default_location_dest_id.id,
+            'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
+            'location_dest_id': self.warehouse_id.lot_stock_id.id,
             'location_id': self.env['stock.location'].search([('usage', '=', 'supplier')])[0].id,
         })
         for line in self.order_line:
@@ -312,13 +312,12 @@ class PurchaseReturn(models.Model):
                 'product_id': line.product_id.id,
                 'name': line.product_id.name,
                 'product_uom_qty': line.product_uom_qty,
-                'location_dest_id': self.picking_type_id.default_location_dest_id.id,
+                'location_dest_id': self.warehouse_id.lot_stock_id.id,
                 'location_id': self.env['stock.location'].search([('usage', '=', 'supplier')])[0].id,
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()
         self.picking_ids = [(6, 0, [picking_id.id])]
-
 
     def action_view_receipt(self):
         '''
@@ -382,7 +381,8 @@ class PurchaseReturnLine(models.Model):
     _order = 'order_id, sequence, id'
     _check_company_auto = True
 
-    order_id = fields.Many2one('purchase.return', string='Order Reference', required=False, ondelete='cascade', index=True,
+    order_id = fields.Many2one('purchase.return', string='Order Reference', required=False, ondelete='cascade',
+                               index=True,
                                copy=False)
     name = fields.Text(string='Description', required=False)
     sequence = fields.Integer(string='Sequence', default=10)
