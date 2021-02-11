@@ -303,17 +303,17 @@ class PurchaseReturn(models.Model):
             'origin': self.name,
             'scheduled_date': fields.Date.today(),
             'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
-            'location_dest_id': self.warehouse_id.lot_stock_id.id,
-            'location_id': self.env['stock.location'].search([('usage', '=', 'supplier')])[0].id,
+                'location_id': self.warehouse_id.lot_stock_id.id,
+                'location_dest_id': self.env['stock.location'].search([('usage', '=', 'customer')])[0].id,
         })
         for line in self.order_line:
             self.env['stock.move'].create({
                 'picking_id': picking_id.id,
                 'product_id': line.product_id.id,
                 'name': line.product_id.name,
-                'product_uom_qty': line.product_uom_qty,
-                'location_dest_id': self.warehouse_id.lot_stock_id.id,
-                'location_id': self.env['stock.location'].search([('usage', '=', 'supplier')])[0].id,
+                'product_uom_qty': -line.product_uom_qty,
+                'location_id': self.warehouse_id.lot_stock_id.id,
+                'location_dest_id': self.env['stock.location'].search([('usage', '=', 'customer')])[0].id,
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()

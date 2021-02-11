@@ -37,7 +37,7 @@
                         <button name="action_cancel" attrs="{'invisible': [('refund_done', '=', True)]}" type="object"
                                 string="Cancel"/>
                         <field name="refund_done" invisible="1"/>
-                        <button name="action_view_receipt" type="object" string="receive products"
+                        <button name="action_view_receipt" type="object" string="Deliver Products"
                                 attrs="{'invisible': [('state', 'in', ['draft'])]}"/>
                         <button name="create_refund" type="object"
                                 attrs="{'invisible': ['|',('refund_done', '=', True),('state', '=', 'draft')]}"
