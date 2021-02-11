@@ -314,9 +314,8 @@ class PurchaseReturn(models.Model):
             'origin': self.name,
             'scheduled_date': fields.Date.today(),
             'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
-            'location_dest_id': self.warehouse_id.lot_stock_id.id,
-            'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[
-                0].default_location_dest_id.id,
+            'location_id': self.warehouse_id.lot_stock_id.id,
+            'location_dest_id': self.partner_id.property_stock_supplier.id,
 
         })
         for line in self.order_line:
@@ -325,8 +324,8 @@ class PurchaseReturn(models.Model):
                 'product_id': line.product_id.id,
                 'name': line.product_id.name,
                 'product_uom_qty': line.product_uom_qty,
-                'location_dest_id': self.warehouse_id.lot_stock_id.id,
-                'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].default_location_dest_id.id,
+                'location_id': self.warehouse_id.lot_stock_id.id,
+                'location_dest_id': self.partner_id.property_stock_supplier.id,
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()
