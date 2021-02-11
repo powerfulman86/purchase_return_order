@@ -63,7 +63,8 @@ class PurchaseReturn(models.Model):
     order_line = fields.One2many('purchase.return.line', 'order_id', string='Order Lines',
                                  states={'cancel': [('readonly', True)], 'done': [('readonly', True)]}, copy=True,
                                  auto_join=True)
-    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.user.company_id.id)
+    company_id = fields.Many2one('res.company', string='Company', required=True,
+                                 default=lambda self: self.env.user.company_id.id)
 
     def _get_invoiced(self):
         for rec in self:
@@ -79,12 +80,14 @@ class PurchaseReturn(models.Model):
                                   tracking=5)
     amount_tax = fields.Float(string='Taxes', store=True, readonly=True, compute='_amount_all')
     amount_total = fields.Float(string='Total', store=True, readonly=True, compute='_amount_all', tracking=4)
+
     def _default_company_id(self):
-        print(">>>>>>>>>>>>>>>> ",self.env.user.company_id )
+        print(">>>>>>>>>>>>>>>> ", self.env.user.company_id)
         if self.env.user.company_id:
             return self.env.user.company_id.id
-        return  self.env['res.company'].search([], limit = 1)
-    company_id = fields.Many2one('res.company', string='Company', required=True,  default=_default_company_id)
+        return self.env['res.company'].search([], limit=1)
+
+    company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
     date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]},
                              default=fields.Date.context_today)
 
@@ -310,17 +313,19 @@ class PurchaseReturn(models.Model):
             'origin': self.name,
             'scheduled_date': fields.Date.today(),
             'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
-                'location_id': self.warehouse_id.lot_stock_id.id,
-                'location_dest_id': self.env['stock.location'].search([('usage', '=', 'customer')])[0].id,
+            'location_dest_id': self.warehouse_id.lot_stock_id.id,
+            'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[
+                0].id.default_location_dest_id.id,
+
         })
         for line in self.order_line:
             self.env['stock.move'].create({
                 'picking_id': picking_id.id,
                 'product_id': line.product_id.id,
                 'name': line.product_id.name,
-                'product_uom_qty': -line.product_uom_qty,
-                'location_id': self.warehouse_id.lot_stock_id.id,
-                'location_dest_id': self.env['stock.location'].search([('usage', '=', 'customer')])[0].id,
+                'product_uom_qty': line.product_uom_qty,
+                'location_dest_id': self.warehouse_id.lot_stock_id.id,
+                'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id.default_location_dest_id.id,
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()
@@ -421,7 +426,6 @@ class PurchaseReturnLine(models.Model):
                                   domain="[('category_id', '=', product_uom_category_id)]")
     product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id', readonly=True)
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Vendor', readonly=False)
-
 
     def _default_company_id(self):
         if self.env.user.company_id:

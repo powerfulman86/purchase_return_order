@@ -92,26 +92,31 @@
                                         attrs="{'readonly': [('state', 'in', ('done','cancel'))]}"
                                 >
                                     <form>
-                                        <!--
-                                            We need the sequence field to be here for new lines to be added at the correct position.
-                                            TODO: at some point we want to fix this in the framework so that an invisible field is not required.
-                                        -->
-                                        <field name="sequence" invisible="1"/>
-                                        <field name="product_uom_category_id" invisible="1"/>
                                         <group>
+                                            <field name="sequence" invisible="1"/>
+                                            <field name="company_id" invisible="1"/>
+                                            <field name="product_uom_category_id" invisible="1"/>
+                                            <field name="product_updatable" invisible="1"/>
+                                            <field name="product_id"/>
+                                            <field name="product_template_id" string="Product"/>
+                                            <field name="name" widget="section_and_note_text" optional="show"/>
+                                            <field name="product_uom_qty"/>
+                                            <field name="product_uom"/>
+                                            <field name="price_unit"/>
+                                            <field name="tax_id"/>
+                                            <field name="discount" string="Disc.%"
+                                                   groups="product.group_discount_per_so_line" optional="show"/>
+                                            <field name="price_subtotal" widget="monetary"
+                                                   groups="account.group_show_line_subtotals_tax_excluded"/>
+                                            <field name="price_total" widget="monetary"
+                                                   groups="account.group_show_line_subtotals_tax_included"/>
+                                            <field name="price_tax" invisible="1"/>
                                         </group>
-
-                                        <field name="name"/>
                                     </form>
-                                    <tree
-                                            string="Sales Return Lines"
-                                            editable="bottom"
-                                    >
-
+                                    <tree string="Sales Return Lines" editable="bottom">
                                         <field name="sequence" widget="handle"/>
                                         <!-- We do not display the type because we don't want the user to be bothered with that information if he has no section or note. -->
                                         <field name="product_uom_category_id" invisible="1"/>
-
                                         <field name="product_updatable" invisible="1"/>
                                         <field
                                                 name="product_id"
@@ -130,17 +135,14 @@
                                                domain="[('sale_ok', '=', True), '|', ('company_id', '=', False), ('company_id', '=', parent.company_id)]"
                                                widget="product_configurator"/>
                                         <field name="name" widget="section_and_note_text" optional="show"/>
-                                        <field
-                                                name="product_uom_qty"
-                                        />
-                                        <field
-                                                name="product_uom"
-                                                force_save="1"
-                                                string="UoM"
-                                                context="{'company_id': parent.company_id}"
-                                                groups="uom.group_uom"
-                                                options='{"no_open": True}'
-                                                optional="show"
+                                        <field name="product_uom_qty"/>
+                                        <field name="product_uom"
+                                               force_save="1"
+                                               string="UoM"
+                                               context="{'company_id': parent.company_id}"
+                                               groups="uom.group_uom"
+                                               options='{"no_open": True}'
+                                               optional="show"
                                         />
                                         <field name="price_unit"/>
                                         <field
