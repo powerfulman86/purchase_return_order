@@ -413,7 +413,7 @@ class PurchaseReturnLine(models.Model):
     discount = fields.Float(string='Discount (%)', digits='Discount', default=0.0)
 
     product_id = fields.Many2one(
-        'product.product', string='Product',
+        'product.product', string='Product', required=1,
         domain="[('purchase_ok', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company_id)]",
         change_default=True, ondelete='restrict', check_company=True)  # Unrequired company
     product_template_id = fields.Many2one(
