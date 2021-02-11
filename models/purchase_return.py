@@ -82,7 +82,6 @@ class PurchaseReturn(models.Model):
     amount_total = fields.Float(string='Total', store=True, readonly=True, compute='_amount_all', tracking=4)
 
     def _default_company_id(self):
-        print(">>>>>>>>>>>>>>>> ", self.env.user.company_id)
         if self.env.user.company_id:
             return self.env.user.company_id.id
         return self.env['res.company'].search([], limit=1)
@@ -322,7 +321,7 @@ class PurchaseReturn(models.Model):
             self.env['stock.move'].create({
                 'picking_id': picking_id.id,
                 'product_id': line.product_id.id,
-                'name': line.product_id.name,
+                'name': line.name if line.name else line.product_id.name ,
                 'product_uom_qty': line.product_uom_qty,
                 'location_id': self.warehouse_id.lot_stock_id.id,
                 'location_dest_id': self.partner_id.property_stock_supplier.id,
