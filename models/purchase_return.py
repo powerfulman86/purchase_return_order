@@ -63,7 +63,7 @@ class PurchaseReturn(models.Model):
     order_line = fields.One2many('purchase.return.line', 'order_id', string='Order Lines',
                                  states={'cancel': [('readonly', True)], 'done': [('readonly', True)]}, copy=True,
                                  auto_join=True)
-    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
+    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.user.company_id.id)
 
     def _get_invoiced(self):
         for rec in self:
@@ -79,29 +79,36 @@ class PurchaseReturn(models.Model):
                                   tracking=5)
     amount_tax = fields.Float(string='Taxes', store=True, readonly=True, compute='_amount_all')
     amount_total = fields.Float(string='Total', store=True, readonly=True, compute='_amount_all', tracking=4)
-    company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
-    date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]}, )
+    def _default_company_id(self):
+        print(">>>>>>>>>>>>>>>> ",self.env.user.company_id )
+        if self.env.user.company_id:
+            return self.env.user.company_id.id
+        return  self.env['res.company'].search([], limit = 1)
+    company_id = fields.Many2one('res.company', string='Company', required=True,  default=_default_company_id)
+    date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]},
+                             default=fields.Date.context_today)
 
     @api.onchange('purchase_id')
     def change_purchase_id(self):
-        lines = []
-        self.partner_id = self.purchase_id.partner_id.id
-        self.warehouse_id = self.purchase_id.picking_type_id.warehouse_id.id
-        self.user_id = self.purchase_id.user_id.id
-        self.company_id = self.purchase_id.company_id.id
-        self.date_order = self.purchase_id.date_order
-        for line in self.purchase_id.order_line:
-            values = {
-                'product_id': line.product_id.id,
-                'name': line.name,
-                'product_uom_qty': line.product_qty,
-                'price_unit': line.price_unit,
-                'tax_id': [(6, 0, line.taxes_id.ids)],
-            }
-            lines.append((0, 0, values))
-        print(lines)
-        self.order_line = None
-        self.order_line = lines
+        if self.purchase_id:
+            lines = []
+            self.partner_id = self.purchase_id.partner_id.id
+            self.warehouse_id = self.purchase_id.picking_type_id.warehouse_id.id
+            self.user_id = self.purchase_id.user_id.id
+            self.company_id = self.purchase_id.company_id.id
+            self.date_order = self.purchase_id.date_order
+            for line in self.purchase_id.order_line:
+                values = {
+                    'product_id': line.product_id.id,
+                    'name': line.name,
+                    'product_uom_qty': line.product_qty,
+                    'price_unit': line.price_unit,
+                    'tax_id': [(6, 0, line.taxes_id.ids)],
+                }
+                lines.append((0, 0, values))
+            print(lines)
+            self.order_line = None
+            self.order_line = lines
 
     def create_refund(self):
         self.ensure_one()
@@ -414,7 +421,18 @@ class PurchaseReturnLine(models.Model):
                                   domain="[('category_id', '=', product_uom_category_id)]")
     product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id', readonly=True)
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Vendor', readonly=False)
-    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
+
+    def _default_company_id(self):
+        if self.env.user_id.company_id:
+            return self.env.user_id.company_id.id
+        return self.env['res.company'].search([], limit=1)
+
+    def _default_company_id(self):
+        if self.env.user_id.company_id:
+            return self.env.user_id.company_id.id
+        return self.env['res.company'].search([], limit=1)
+
+    company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
 
     @api.onchange('product_id')
     def _onchange_product_id(self):

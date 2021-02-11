@@ -17,7 +17,7 @@
         <field name="arch" type="xml">
             <graph string="Purchase Orders Statistics" type="line">
                 <field name="date_order" interval="day" type="col"/>
-                <field name="untaxed_total" type="measure"/>
+                <field name="price_total" type="measure"/>
             </graph>
         </field>
     </record>
