@@ -48,6 +48,7 @@ class PurchaseReturn(models.Model):
     ], string='Status', readonly=True, copy=False, index=True, tracking=3, default='draft')
 
     refund_done = fields.Boolean()
+    picking_delivered = fields.Boolean(compute="_compute_picking_ids")
 
     user_id = fields.Many2one(
         'res.users', string='Salesperson', index=True, tracking=2, default=lambda self: self.env.user,
@@ -293,6 +294,16 @@ class PurchaseReturn(models.Model):
         """
         # create an analytic account if at least an expense product
         self._create_stock()
+        if self.purchase_id:
+            for line in self.order_line:
+                for p_line in self.purchase_id.order_line:
+                    if line.product_id == p_line.product_id and line.product_uom_qty > p_line.product_qty:
+                        raise ValidationError(_("Can not return Quantity more than [ %s ] Purchased for product [ %s ]"%(p_line.product_uom_qty, line.product_id.name)))
+        else:
+            for line in self.order_line:
+                if line.product_id.qty_available < line.product_uom_qty:
+                    raise ValidationError(_("Can not return Quantity more than [ %s ] Available for product [ %s ]" % (line.product_uom_qty, line.product_id.name)))
+
         return True
 
     def action_confirm(self):
@@ -306,7 +317,6 @@ class PurchaseReturn(models.Model):
         return {'done', 'cancel'}
 
     def _create_stock(self):
-        print(">>>>>>>>>>>>>>>> ",self.env['stock.picking.type'].search([('code', '=', 'outgoing')]))
         pickings = self.mapped('picking_ids')
         picking_id = self.env["stock.picking"].create({
             'partner_id': self.partner_id.id,
@@ -380,6 +390,14 @@ class PurchaseReturn(models.Model):
     def _compute_picking_ids(self):
         for rec in self:
             rec.receipts_count = len(rec.picking_ids)
+            if rec.picking_ids:
+                for pick in rec.picking_ids:
+                    if pick.state == 'done':
+                        rec.picking_delivered = True
+                    else:
+                        rec.picking_delivered = False
+            else:
+                rec.picking_delivered = False
 
     @api.depends('move_ids')
     def _compute_refund(self):

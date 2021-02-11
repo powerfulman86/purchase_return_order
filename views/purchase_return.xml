@@ -37,8 +37,9 @@
                         <button name="action_cancel" attrs="{'invisible': [('refund_done', '=', True)]}" type="object"
                                 string="Cancel"/>
                         <field name="refund_done" invisible="1"/>
+                        <field name="picking_delivered" invisible="1"/>
                         <button name="action_view_receipt" type="object" string="Deliver Products"
-                                attrs="{'invisible': [('state', 'in', ['draft'])]}"/>
+                                attrs="{'invisible': ['|',('state', 'in', ['draft']),('picking_delivered', '=', True)]}"/>
                         <button name="create_refund" type="object"
                                 attrs="{'invisible': ['|',('refund_done', '=', True),('state', '=', 'draft')]}"
                                 string="Create Refund"/>
@@ -283,11 +284,12 @@
             </p>
             </field>
         </record>
-
+        <!-- This Menu Item will appear in the Upper bar, That's why It needs NO parent or action -->
+        <menuitem id="purchase_return_root" name="Return" parent="purchase.menu_purchase_root" sequence="3"/>
         <menuitem id="return_purchase_quotation_menu" name="Purchase Return request"
-                  parent="purchase.menu_procurement_management"
+                  parent="purchase_return_root"
                   action="action_quotations_purchase_return" sequence="98"/>
-        <menuitem id="return_purchase_order_menu" name="Purchase Return" parent="purchase.menu_procurement_management"
+        <menuitem id="return_purchase_order_menu" name="Purchase Return" parent="purchase_return_root"
                   action="action_purchase_return_orders" sequence="99"/>
     </data>
 </odoo>
