@@ -307,6 +307,7 @@ class PurchaseReturn(models.Model):
         return {'done', 'cancel'}
 
     def _create_stock(self):
+        print(">>>>>>>>>>>>>>>> ",self.env['stock.picking.type'].search([('code', '=', 'outgoing')]))
         pickings = self.mapped('picking_ids')
         picking_id = self.env["stock.picking"].create({
             'partner_id': self.partner_id.id,
@@ -315,7 +316,7 @@ class PurchaseReturn(models.Model):
             'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
             'location_dest_id': self.warehouse_id.lot_stock_id.id,
             'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[
-                0].id.default_location_dest_id.id,
+                0].default_location_dest_id.id,
 
         })
         for line in self.order_line:
@@ -325,7 +326,7 @@ class PurchaseReturn(models.Model):
                 'name': line.product_id.name,
                 'product_uom_qty': line.product_uom_qty,
                 'location_dest_id': self.warehouse_id.lot_stock_id.id,
-                'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id.default_location_dest_id.id,
+                'location_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].default_location_dest_id.id,
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()
