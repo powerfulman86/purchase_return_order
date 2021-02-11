@@ -328,6 +328,7 @@ class PurchaseReturn(models.Model):
                 'product_uom': line.product_id.uom_id.id,
             })
             picking_id.action_confirm()
+            picking_id.action_assign()
         self.picking_ids = [(6, 0, [picking_id.id])]
 
     def action_view_receipt(self):
