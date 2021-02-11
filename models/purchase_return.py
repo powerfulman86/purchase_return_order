@@ -321,7 +321,7 @@ class PurchaseReturn(models.Model):
             self.env['stock.move'].create({
                 'picking_id': picking_id.id,
                 'product_id': line.product_id.id,
-                'name': "Return " + line.name if line.name else "Return "+ line.product_id.name ,
+                'name': "Purchase Return "+ self.name,
                 'product_uom_qty': line.product_uom_qty,
                 'location_id': self.warehouse_id.lot_stock_id.id,
                 'location_dest_id': self.partner_id.property_stock_supplier.id,
