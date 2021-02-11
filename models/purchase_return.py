@@ -422,14 +422,10 @@ class PurchaseReturnLine(models.Model):
     product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id', readonly=True)
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Vendor', readonly=False)
 
-    def _default_company_id(self):
-        if self.env.user_id.company_id:
-            return self.env.user_id.company_id.id
-        return self.env['res.company'].search([], limit=1)
 
     def _default_company_id(self):
-        if self.env.user_id.company_id:
-            return self.env.user_id.company_id.id
+        if self.env.user.company_id:
+            return self.env.user.company_id.id
         return self.env['res.company'].search([], limit=1)
 
     company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
