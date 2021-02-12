@@ -4,7 +4,7 @@
         <field name="name">product.month.pivot</field>
         <field name="model">purchase.return.report</field>
         <field name="arch" type="xml">
-            <pivot string="Purchase Analysis" disable_linking="True" display_quantity="true">
+            <pivot string="Purchase Return Analysis" disable_linking="True" display_quantity="true">
                 <field name="category_id" type="row"/>
                 <field name="order_id" type="measure"/>
                 <field name="price_total" type="measure"/>
@@ -15,7 +15,7 @@
         <field name="name">product.month.graph</field>
         <field name="model">purchase.return.report</field>
         <field name="arch" type="xml">
-            <graph string="Purchase Orders Statistics" type="line">
+            <graph string="Purchase Return Orders Statistics" type="line">
                 <field name="date_order" interval="day" type="col"/>
                 <field name="price_total" type="measure"/>
             </graph>
@@ -24,7 +24,7 @@
 
     <!-- Custom reports (aka filters) -->
     <record id="filter_purchase_return_monthly_purchases" model="ir.filters">
-        <field name="name">Monthly Purchases</field>
+        <field name="name">Monthly Purchases Return</field>
         <field name="model_id">purchase.return.report</field>
         <field name="domain">[('state','!=','cancel')]</field>
         <field name="user_id" eval="False"/>
