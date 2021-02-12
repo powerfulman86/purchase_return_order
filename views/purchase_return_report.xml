@@ -78,7 +78,7 @@
     </record>
 
     <record id="action_purchase_return_report_all" model="ir.actions.act_window">
-        <field name="name">Purchase Analysis</field>
+        <field name="name">Purchase Return Analysis</field>
         <field name="res_model">purchase.return.report</field>
         <field name="view_mode">graph,pivot</field>
         <field name="view_id"></field>  <!-- force empty -->
