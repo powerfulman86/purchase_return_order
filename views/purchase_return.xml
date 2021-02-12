@@ -253,7 +253,7 @@
         </record>
 
         <record id="action_quotations_purchase_return" model="ir.actions.act_window">
-            <field name="name">Requests</field>
+            <field name="name">Return Requests</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">purchase.return</field>
             <field name="view_id" ref="purchase_return_view_tree"/>
@@ -263,13 +263,13 @@
                 <p class="o_view_nocontent_smiling_face">
                     Create a new Request, the first step of a new return!
                 </p><p>
-                Once the quotation is confirmed by the customer, it becomes a Sales Return.<br/> You will be able to
-                create an refund the payment.
+                Once the Request is confirmed by the Venndor, it becomes a Return Order.<br/> You will be able to
+                create a refund the payment.
             </p>
             </field>
         </record>
         <record id="action_purchase_return_orders" model="ir.actions.act_window">
-            <field name="name">Sales Returns</field>
+            <field name="name">Purchase Return</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">purchase.return</field>
             <field name="view_mode">tree,form</field>
@@ -279,14 +279,14 @@
                 <p class="o_view_nocontent_smiling_face">
                     Create a new quotation, the first step of a new return!
                 </p><p>
-                Once the quotation is confirmed, it becomes a Sales Return.<br/> You will be able to create note
+                Once the Request is confirmed, it becomes a Purchase Return.<br/> You will be able to create note
                 refund the payment.
             </p>
             </field>
         </record>
         <!-- This Menu Item will appear in the Upper bar, That's why It needs NO parent or action -->
         <menuitem id="purchase_return_root" name="Return" parent="purchase.menu_purchase_root" sequence="3"/>
-        <menuitem id="return_purchase_quotation_menu" name="Purchase Return request"
+        <menuitem id="return_purchase_quotation_menu" name="Return Request"
                   parent="purchase_return_root"
                   action="action_quotations_purchase_return" sequence="98"/>
         <menuitem id="return_purchase_order_menu" name="Purchase Return" parent="purchase_return_root"
