@@ -105,6 +105,7 @@ class PurchaseReturn(models.Model):
                     'product_id': line.product_id.id,
                     'name': line.name,
                     'product_uom_qty': line.product_qty,
+                    'product_uom': line.product_uom.id,
                     'price_unit': line.price_unit,
                     'tax_id': [(6, 0, line.taxes_id.ids)],
                 }
@@ -127,6 +128,7 @@ class PurchaseReturn(models.Model):
                 'product_id': order_line.product_id.id,
                 'quantity': order_line.product_uom_qty if self.amount_total >= 0 else -order_line.product_uom_qty,
                 'discount': order_line.discount,
+                'product_uom': order_line.product_uom.id,
                 'price_unit': order_line.price_unit,
                 'name': order_line.product_id.display_name,
                 'tax_ids': [(6, 0, order_line.tax_id.ids)],
@@ -298,11 +300,14 @@ class PurchaseReturn(models.Model):
             for line in self.order_line:
                 for p_line in self.purchase_id.order_line:
                     if line.product_id == p_line.product_id and line.product_uom_qty > p_line.product_qty:
-                        raise ValidationError(_("Can not return Quantity more than [ %s ] Purchased for product [ %s ]"%(p_line.product_uom_qty, line.product_id.name)))
+                        raise ValidationError(_(
+                            "Can not return Quantity more than [ %s ] Purchased for product [ %s ]" % (
+                                p_line.product_uom_qty, line.product_id.name)))
         else:
             for line in self.order_line:
                 if line.product_id.qty_available < line.product_uom_qty:
-                    raise ValidationError(_("Can not return Quantity more than [ %s ] Available for product [ %s ]" % (line.product_uom_qty, line.product_id.name)))
+                    raise ValidationError(_("Can not return Quantity more than [ %s ] Available for product [ %s ]" % (
+                        line.product_uom_qty, line.product_id.name)))
 
         return True
 
@@ -331,7 +336,7 @@ class PurchaseReturn(models.Model):
             self.env['stock.move'].create({
                 'picking_id': picking_id.id,
                 'product_id': line.product_id.id,
-                'name': "Purchase Return "+ self.name,
+                'name': "Purchase Return " + self.name,
                 'product_uom_qty': line.product_uom_qty,
                 'location_id': self.warehouse_id.lot_stock_id.id,
                 'location_dest_id': self.partner_id.property_stock_supplier.id,
@@ -414,7 +419,7 @@ class PurchaseReturnLine(models.Model):
     order_id = fields.Many2one('purchase.return', string='Order Reference', required=False, ondelete='cascade',
                                index=True,
                                copy=False)
-    name = fields.Text(string='Description', required=False)
+    name = fields.Text(string='Description', required=True)
     sequence = fields.Integer(string='Sequence', default=10)
 
     invoice_lines = fields.Many2many('account.move.line', 'purchase_return_line_invoice_rel', 'order_line_id',
@@ -455,6 +460,7 @@ class PurchaseReturnLine(models.Model):
     @api.onchange('product_id')
     def _onchange_product_id(self):
         self.price_unit = self.product_id.list_price
+        self.product_uom = self.product_id.uom_po_id
         self.name = self.product_id.display_name if self.product_id.display_name else self.product_id.name
 
     @api.depends('product_uom_qty', 'discount', 'price_unit', 'tax_id')
