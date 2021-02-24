@@ -1,4 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_purchase_return,purchase_return,model_purchase_return,,1,1,1,1
-access_purchase_return_line,purchase_return_line,model_purchase_return_line,,1,1,1,1
-access_purchase_return_report,purchase_return_report,model_purchase_return_report,,1,1,1,1
+access_purchase_return,purchase_return,model_purchase_return,purchase.group_purchase_user,1,1,1,1
+access_purchase_return_manager,purchase_return_manager,model_purchase_return,purchase.group_purchase_manager,1,1,1,1
+access_purchase_return_line,purchase_return_line,model_purchase_return_line,purchase.group_purchase_user,1,1,1,1
+access_purchase_return_line_manager,purchase_return_line,model_purchase_return_line,purchase.group_purchase_manager,1,1,1,1
+access_report_purchase_return,purchase_return_report_manager,model_purchase_return_report,purchase.group_purchase_manager,1,0,0,0
+access_report_purchase_return_user,purchase_return_report,model_purchase_return_report,purchase.group_purchase_user,1,0,0,0
+access_report_purchase_net,purchase_net_report_manager,model_purchase_net_report,purchase.group_purchase_manager,1,0,0,0
+access_report_purchase_net_user,purchase_net_report,model_purchase_net_report,purchase.group_purchase_user,1,0,0,0

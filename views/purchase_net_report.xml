@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_purchase_net_pivot" model="ir.ui.view">
+        <field name="name">purchase.net.report.pivot</field>
+        <field name="model">purchase.net.report</field>
+        <field name="arch" type="xml">
+            <pivot string="purchase Net Analysis" disable_linking="True">
+                <field name="category_id" type="row"/>
+                <field name="date_order" interval="month" type="col"/>
+                <field name="price_total" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_purchase_net_graph" model="ir.ui.view">
+        <field name="name">purchase.net.report.graph</field>
+        <field name="model">purchase.net.report</field>
+        <field name="arch" type="xml">
+            <graph string="purchase Net Analysis" type="line">
+                <field name="date_order" type="row" interval="day"/>
+                <field name="price_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_purchase_net_search" model="ir.ui.view">
+        <field name="name">purchase.net.report.search</field>
+        <field name="model">purchase.net.report</field>
+        <field name="arch" type="xml">
+            <search string="purchase Net Analysis">
+                <field name="date_order"/>
+                <filter string="Date" name="year" invisible="1" date="date" default_period="this_year"/>
+                <separator/>
+                <field name="product_id"/>
+                <field name="category_id"/>
+                <field name="partner_id"/>
+                <group expand="0" string="Extended Filters">
+                    <field name="category_id" filter_domain="[('category_id', 'child_of', self)]"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                </group>
+                <group expand="1" string="Group By">
+                    <filter string="Customer" name="Customer" context="{'group_by':'partner_id'}"/>
+                    <filter string="Product" name="Product" context="{'group_by':'product_id'}"/>
+                    <filter string="Product Category" name="Category" context="{'group_by':'category_id'}"/>
+                    <filter name="Transaction Type" string="Transaction Type" context="{'group_by':'trans_type'}"/>
+                    <filter string="Company" name="company" groups="base.group_multi_company"
+                            context="{'group_by':'company_id'}"/>
+                    <separator/>
+                    <filter string="Order Date" name="date" context="{'group_by':'date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_purchase_net_report" model="ir.actions.act_window">
+        <field name="name">purchase Net Analysis</field>
+        <field name="res_model">purchase.net.report</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="view_id"></field>  <!-- force empty -->
+        <field name="help">This report performs analysis on your purchase Net.</field>
+    </record>
+
+     <menuitem id="purchase_net_report"
+              name="Purchase Net Report"
+              action="action_purchase_net_report"
+              parent="purchase.purchase_report"
+              sequence="3"/>
+</odoo>

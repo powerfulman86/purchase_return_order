@@ -88,7 +88,7 @@
         <field name="target">current</field>
     </record>
     <menuitem id="purchase_return_report_all"
-              name="Purchases Return"
+              name="Purchase Return"
               action="action_purchase_return_report_all"
               parent="purchase.purchase_report"
               sequence="1"/>

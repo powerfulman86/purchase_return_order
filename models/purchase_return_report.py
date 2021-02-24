@@ -7,7 +7,7 @@ from odoo import api, fields, models
 
 class PurchaseReturnReport(models.Model):
     _name = "purchase.return.report"
-    _description = "Return Return Analysis Report"
+    _description = "Return Analysis Report"
     _auto = False
     _order = 'date_order desc'
 
