@@ -4,7 +4,7 @@
         <field name="name">purchase.net.report.pivot</field>
         <field name="model">purchase.net.report</field>
         <field name="arch" type="xml">
-            <pivot string="purchase Net Analysis" disable_linking="True">
+            <pivot string="Purchase Net Analysis" disable_linking="True">
                 <field name="category_id" type="row"/>
                 <field name="date_order" interval="month" type="col"/>
                 <field name="price_total" type="measure"/>
@@ -16,7 +16,7 @@
         <field name="name">purchase.net.report.graph</field>
         <field name="model">purchase.net.report</field>
         <field name="arch" type="xml">
-            <graph string="purchase Net Analysis" type="line">
+            <graph string="Purchase Net Analysis" type="line">
                 <field name="date_order" type="row" interval="day"/>
                 <field name="price_total" type="measure"/>
             </graph>
@@ -27,26 +27,24 @@
         <field name="name">purchase.net.report.search</field>
         <field name="model">purchase.net.report</field>
         <field name="arch" type="xml">
-            <search string="purchase Net Analysis">
-                <field name="date_order"/>
-                <filter string="Date" name="year" invisible="1" date="date" default_period="this_year"/>
-                <separator/>
-                <field name="product_id"/>
-                <field name="category_id"/>
+            <search string="Purchase Net Analysis">
                 <field name="partner_id"/>
+                <field name="product_id"/>
                 <group expand="0" string="Extended Filters">
+                    <field name="date_order"/>
                     <field name="category_id" filter_domain="[('category_id', 'child_of', self)]"/>
-                    <field name="company_id" groups="base.group_multi_company"/>
                 </group>
                 <group expand="1" string="Group By">
-                    <filter string="Customer" name="Customer" context="{'group_by':'partner_id'}"/>
-                    <filter string="Product" name="Product" context="{'group_by':'product_id'}"/>
-                    <filter string="Product Category" name="Category" context="{'group_by':'category_id'}"/>
-                    <filter name="Transaction Type" string="Transaction Type" context="{'group_by':'trans_type'}"/>
-                    <filter string="Company" name="company" groups="base.group_multi_company"
-                            context="{'group_by':'company_id'}"/>
+                    <filter string="Vendor" name="group_partner_id" context="{'group_by':'partner_id'}"/>
+                    <filter string="Vendor Country" name="country_id" context="{'group_by':'country_id'}"/>
+                    <filter string="Product" name="group_product_id" context="{'group_by':'product_id'}"/>
+                    <filter string="Product Category" name="group_category_id" context="{'group_by':'category_id'}"/>
+                    <filter string="Company" name="company" context="{'group_by':'company_id'}"
+                            groups="base.group_multi_company"/>
                     <separator/>
-                    <filter string="Order Date" name="date" context="{'group_by':'date'}"/>
+                    <filter string="Order Date" name="order_month" context="{'group_by': 'date_order:month'}"/>
+                    <filter string="Confirmation Date" name="group_date_order_month"
+                            context="{'group_by': 'date_order:month'}"/>
                 </group>
             </search>
         </field>

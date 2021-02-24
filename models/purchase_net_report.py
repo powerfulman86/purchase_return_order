@@ -7,7 +7,7 @@ from odoo import api, fields, models
 
 class PurchaseNetReport(models.Model):
     _name = "purchase.net.report"
-    _description = "Return Analysis Report"
+    _description = "Return Net Analysis Report"
     _auto = False
     _order = 'date_order desc'
 
@@ -32,6 +32,7 @@ class PurchaseNetReport(models.Model):
         with_ = ("WITH %s" % with_clause) if with_clause else ""
 
         select_ = """
+                min(l.id) as id,
                 po.name as name,
                 po.date_order as date_order,
                 'Purchase Order' as trans_type,  
@@ -77,6 +78,7 @@ class PurchaseNetReport(models.Model):
             """ % groupby
 
         select2_ = """
+                min(l.id) as id,
                 po.name as name,
                 po.date_order as date_order,
                 'Return Order' as trans_type,  
