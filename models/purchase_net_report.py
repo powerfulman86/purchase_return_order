@@ -108,7 +108,7 @@ class PurchaseNetReport(models.Model):
                 l.product_id,
                 p.product_tmpl_id,
                 t.categ_id as category_id,
-                sum(l.product_qty / line_uom.factor * product_uom.factor) as qty_ordered,
+                sum(l.product_qty / line_uom.factor * product_uom.factor)*-1 as qty_ordered,
                 t.uom_id as product_uom,
                 sum(l.price_total)::decimal(16,2) *-1 as price_total,
                 (sum(l.product_uom_qty * l.price_unit)/NULLIF(sum(l.product_uom_qty/line_uom.factor*product_uom.factor),0.0))::decimal(16,2) *-1 as price_average,
