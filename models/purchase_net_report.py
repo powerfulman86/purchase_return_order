@@ -27,6 +27,23 @@ class PurchaseNetReport(models.Model):
     product_tmpl_id = fields.Many2one('product.template', 'Product Template', readonly=True)
     country_id = fields.Many2one('res.country', 'Partner Country', readonly=True)
     account_analytic_id = fields.Many2one('account.analytic.account', 'Analytic Account', readonly=True)
+    qty_ordered = fields.Float('Qty Ordered', readonly=True)
+
+#     sum(l.product_qty / line_uom.factor * product_uom.factor) as qty_ordered,
+#     sum(l.qty_received / line_uom.factor * product_uom.factor) as qty_received,
+#     sum(l.qty_invoiced / line_uom.factor * product_uom.factor) as qty_billed,
+#     case
+#     when
+#     t.purchase_method = 'purchase'
+#     then
+#     sum(l.product_qty / line_uom.factor * product_uom.factor) - sum(
+#         l.qty_invoiced / line_uom.factor * product_uom.factor)
+#     else sum(l.qty_received / line_uom.factor * product_uom.factor) - sum(
+#         l.qty_invoiced / line_uom.factor * product_uom.factor)
+#
+#
+# end as qty_to_be_billed
+
 
     def _query(self, with_clause='', fields={}, groupby='', from_clause=''):
         with_ = ("WITH %s" % with_clause) if with_clause else ""
@@ -41,10 +58,12 @@ class PurchaseNetReport(models.Model):
                 l.product_id,
                 p.product_tmpl_id,
                 t.categ_id as category_id,
+                sum(l.product_qty / line_uom.factor * product_uom.factor) as qty_ordered,
                 t.uom_id as product_uom,
                 sum(l.price_total)::decimal(16,2) as price_total,
                 (sum(l.product_uom_qty * l.price_unit)/NULLIF(sum(l.product_uom_qty/line_uom.factor*product_uom.factor),0.0))::decimal(16,2) as price_average,
-                partner.country_id as country_id
+                partner.country_id as country_id,
+                analytic_account.id as account_analytic_id
             """
 
         for field in fields.values():
@@ -57,7 +76,8 @@ class PurchaseNetReport(models.Model):
                     left join product_product p on (l.product_id=p.id)
                         left join product_template t on (p.product_tmpl_id=t.id)
                 left join uom_uom line_uom on (line_uom.id=l.product_uom)
-                left join uom_uom product_uom on (product_uom.id=t.uom_id) %s
+                left join uom_uom product_uom on (product_uom.id=t.uom_id) 
+                left join account_analytic_account analytic_account on (l.account_analytic_id = analytic_account.id) %s
             """ % from_clause
 
         groupby_ = """
@@ -74,7 +94,8 @@ class PurchaseNetReport(models.Model):
                 t.uom_id,
                 line_uom.id,
                 product_uom.factor,
-                partner.country_id %s
+                partner.country_id,
+                analytic_account.id %s
             """ % groupby
 
         select2_ = """
@@ -87,10 +108,12 @@ class PurchaseNetReport(models.Model):
                 l.product_id,
                 p.product_tmpl_id,
                 t.categ_id as category_id,
+                sum(l.product_qty / line_uom.factor * product_uom.factor) as qty_ordered,
                 t.uom_id as product_uom,
                 sum(l.price_total)::decimal(16,2) *-1 as price_total,
                 (sum(l.product_uom_qty * l.price_unit)/NULLIF(sum(l.product_uom_qty/line_uom.factor*product_uom.factor),0.0))::decimal(16,2) *-1 as price_average,
-                partner.country_id as country_id 
+                partner.country_id as country_id,
+                analytic_account.id as account_analytic_id
                 """
 
         for field in fields.values():
@@ -103,7 +126,8 @@ class PurchaseNetReport(models.Model):
                     left join product_product p on (l.product_id=p.id)
                         left join product_template t on (p.product_tmpl_id=t.id)
                 left join uom_uom line_uom on (line_uom.id=l.product_uom)
-                left join uom_uom product_uom on (product_uom.id=t.uom_id) %s
+                left join uom_uom product_uom on (product_uom.id=t.uom_id) 
+                left join account_analytic_account analytic_account on (l.account_analytic_id = analytic_account.id) %s
             """ % from_clause
 
         groupby2_ = """
@@ -120,7 +144,8 @@ class PurchaseNetReport(models.Model):
                 t.uom_id,
                 line_uom.id,
                 product_uom.factor,
-                partner.country_id %s
+                partner.country_id,
+                analytic_account.id %s
                 """ % groupby
 
         return '%s (SELECT %s FROM %s WHERE l.product_id IS NOT NULL GROUP BY %s Union SELECT %s FROM %s WHERE ' \

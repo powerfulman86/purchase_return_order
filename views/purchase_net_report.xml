@@ -51,7 +51,7 @@
     </record>
 
     <record id="action_purchase_net_report" model="ir.actions.act_window">
-        <field name="name">purchase Net Analysis</field>
+        <field name="name">Purchase Net Analysis</field>
         <field name="res_model">purchase.net.report</field>
         <field name="view_mode">graph,pivot</field>
         <field name="view_id"></field>  <!-- force empty -->

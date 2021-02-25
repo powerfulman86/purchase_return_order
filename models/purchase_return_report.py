@@ -29,7 +29,6 @@ class PurchaseReturnReport(models.Model):
     delay_pass = fields.Float('Days to Receive', digits=(16, 2), readonly=True)
     price_total = fields.Float('Total', readonly=True)
     price_average = fields.Float('Average Cost', readonly=True, group_operator="avg")
-    nbr_lines = fields.Integer('# of Lines', readonly=True)
     category_id = fields.Many2one('product.category', 'Product Category', readonly=True)
     product_tmpl_id = fields.Many2one('product.template', 'Product Template', readonly=True)
     country_id = fields.Many2one('res.country', 'Partner Country', readonly=True)
@@ -38,6 +37,7 @@ class PurchaseReturnReport(models.Model):
     weight = fields.Float('Gross Weight', readonly=True)
     volume = fields.Float('Volume', readonly=True)
     order_id = fields.Many2one('purchase.order', 'Order', readonly=True)
+    qty_ordered = fields.Float('Qty Ordered', readonly=True)
 
     def init(self):
         # self._table = sale_report
@@ -62,8 +62,8 @@ class PurchaseReturnReport(models.Model):
                         l.product_id,
                         p.product_tmpl_id,
                         t.categ_id as category_id, 
+                        sum(l.product_qty / line_uom.factor * product_uom.factor) as qty_ordered,
                         t.uom_id as product_uom,
-                        count(*) as nbr_lines,
                         sum(l.price_total)::decimal(16,2) as price_total,
                         (sum(l.product_uom_qty * l.price_unit)/NULLIF(sum(l.product_uom_qty/line_uom.factor*product_uom.factor),0.0))::decimal(16,2) as price_average,
                         partner.country_id as country_id,

@@ -87,7 +87,7 @@ class PurchaseReturn(models.Model):
             return self.env.user.company_id.id
         return self.env['res.company'].search([], limit=1)
 
-    company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
+    # company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
     date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]},
                              default=fields.Date.context_today)
 
@@ -377,7 +377,6 @@ class PurchaseReturn(models.Model):
 
     def action_view_purchase_return(self):
         view_id = self.env.ref('account.view_move_form').id
-        print(">>>>>>>>>>>>>> ", self.invoice_ids.id)
         return {
             'name': _('View Credit Note'),
             'type': 'ir.actions.act_window',
@@ -412,7 +411,7 @@ class PurchaseReturn(models.Model):
 
 class PurchaseReturnLine(models.Model):
     _name = 'purchase.return.line'
-    _description = 'Rrturn Order Line'
+    _description = 'Return Order Line'
     _order = 'order_id, sequence, id'
     _check_company_auto = True
 
@@ -425,16 +424,12 @@ class PurchaseReturnLine(models.Model):
     invoice_lines = fields.Many2many('account.move.line', 'purchase_return_line_invoice_rel', 'order_line_id',
                                      'invoice_line_id', string='Invoice Lines', copy=False)
     price_unit = fields.Float('Unit Price', required=False, digits='Product Price', default=0.0)
-
     price_subtotal = fields.Float(string='Subtotal', compute="_compute_amount", readonly=True, store=True)
     price_tax = fields.Float(string='Total Tax', compute="_compute_amount", readonly=True, store=True)
     price_total = fields.Float(string='Total', compute="_compute_amount", readonly=True, store=True)
-
     tax_id = fields.Many2many('account.tax', string='Taxes',
                               domain=['|', ('active', '=', False), ('active', '=', True)])
-
     discount = fields.Float(string='Discount (%)', digits='Discount', default=0.0)
-
     product_id = fields.Many2one(
         'product.product', string='Product', required=1,
         domain="[('purchase_ok', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company_id)]",
@@ -444,11 +439,14 @@ class PurchaseReturnLine(models.Model):
         related="product_id.product_tmpl_id", domain=[('purchase_ok', '=', True)])
     product_updatable = fields.Boolean(string='Can Edit Product', readonly=True,
                                        default=True)
-    product_uom_qty = fields.Float(string='Quantity', digits='Product Unit of Measure', required=False, default=1.0)
+    product_qty = fields.Float(string='Quantity', digits='Product Unit of Measure', required=True)
+    product_uom_qty = fields.Float(string='Total Quantity', compute='_compute_product_uom_qty', store=True)
     product_uom = fields.Many2one('uom.uom', string='Unit of Measure',
                                   domain="[('category_id', '=', product_uom_category_id)]")
     product_uom_category_id = fields.Many2one(related='product_id.uom_id.category_id', readonly=True)
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Vendor', readonly=False)
+    account_analytic_id = fields.Many2one('account.analytic.account', string='Analytic Account')
+    analytic_tag_ids = fields.Many2many('account.analytic.tag', string='Analytic Tags')
 
     def _default_company_id(self):
         if self.env.user.company_id:
@@ -462,18 +460,42 @@ class PurchaseReturnLine(models.Model):
         self.price_unit = self.product_id.list_price
         self.product_uom = self.product_id.uom_po_id
         self.name = self.product_id.display_name if self.product_id.display_name else self.product_id.name
+        self._suggest_quantity()
 
-    @api.depends('product_uom_qty', 'discount', 'price_unit', 'tax_id')
+    @api.depends('product_qty', 'discount', 'price_unit', 'tax_id')
     def _compute_amount(self):
         """
         Compute the amounts of the SO line.
         """
         for line in self:
             price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-            taxes = line.tax_id.compute_all(price, False, line.product_uom_qty, product=line.product_id,
+            taxes = line.tax_id.compute_all(price, False, line.product_qty, product=line.product_id,
                                             partner=line.order_id.partner_id)
             line.update({
                 'price_tax': sum(t.get('amount', 0.0) for t in taxes.get('taxes', [])),
                 'price_total': taxes['total_included'],
                 'price_subtotal': taxes['total_excluded'],
             })
+
+    @api.depends('product_uom', 'product_qty', 'product_id.uom_id')
+    def _compute_product_uom_qty(self):
+        for line in self:
+            if line.product_id and line.product_id.uom_id != line.product_uom:
+                line.product_uom_qty = line.product_uom._compute_quantity(line.product_qty, line.product_id.uom_id)
+            else:
+                line.product_uom_qty = line.product_qty
+
+    def _suggest_quantity(self):
+        '''
+        Suggest a minimal quantity based on the seller
+        '''
+        if not self.product_id:
+            return
+        seller_min_qty = self.product_id.seller_ids\
+            .filtered(lambda r: r.name == self.order_id.partner_id and (not r.product_id or r.product_id == self.product_id))\
+            .sorted(key=lambda r: r.min_qty)
+        if seller_min_qty:
+            self.product_qty = seller_min_qty[0].min_qty or 1.0
+            self.product_uom = seller_min_qty[0].product_uom
+        else:
+            self.product_qty = 1.0
