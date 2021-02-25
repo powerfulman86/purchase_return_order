@@ -4,13 +4,13 @@
 from datetime import datetime, timedelta
 from functools import partial
 from itertools import groupby
-
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 from odoo import api, fields, models, SUPERUSER_ID, _
 from odoo.exceptions import UserError, ValidationError
-from odoo.tools.misc import formatLang
+from odoo.tools.misc import formatLang, get_lang
 from odoo.osv import expression
 from odoo.tools import float_is_zero, float_compare
-
+from dateutil.relativedelta import relativedelta
 from werkzeug.urls import url_encode
 
 
@@ -40,6 +40,14 @@ class PurchaseReturn(models.Model):
     client_order_ref = fields.Char(string='Vendor Reference', copy=False)
     reference = fields.Char(string='Payment Ref.', copy=False,
                             help='The payment communication of this purchase order.')
+    READONLY_STATES = {
+        'return': [('readonly', True)],
+        'done': [('readonly', True)],
+        'cancel': [('readonly', True)],
+    }
+
+    currency_id = fields.Many2one('res.currency', 'Currency', required=True, states=READONLY_STATES,
+                                  default=lambda self: self.env.company.currency_id.id)
     state = fields.Selection([
         ('draft', 'Quotation'),
         ('return', 'Return Order'),
@@ -88,7 +96,7 @@ class PurchaseReturn(models.Model):
         return self.env['res.company'].search([], limit=1)
 
     # company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
-    date_order = fields.Date(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]},
+    date_order = fields.Datetime(string='Order Date', readonly=True, copy=False, states={'draft': [('readonly', False)]},
                              default=fields.Date.context_today)
 
     @api.onchange('purchase_id')
@@ -107,12 +115,27 @@ class PurchaseReturn(models.Model):
                     'product_uom_qty': line.product_qty,
                     'product_uom': line.product_uom.id,
                     'price_unit': line.price_unit,
-                    'tax_id': [(6, 0, line.taxes_id.ids)],
+                    'taxes_id': [(6, 0, line.taxe_id.ids)],
                 }
                 lines.append((0, 0, values))
             print(lines)
             self.order_line = None
             self.order_line = lines
+
+    @api.onchange('partner_id', 'company_id')
+    def onchange_partner_id(self):
+        # Ensures all properties and fiscal positions
+        # are taken with the company of the order
+        # if not defined, force_company doesn't change anything.
+        self = self.with_context(force_company=self.company_id.id)
+        if not self.partner_id:
+            # self.fiscal_position_id = False
+            self.currency_id = self.env.company.currency_id.id
+        else:
+            # self.fiscal_position_id = self.env['account.fiscal.position'].get_fiscal_position(self.partner_id.id)
+            # self.payment_term_id = self.partner_id.property_supplier_payment_term_id.id
+            self.currency_id = self.partner_id.property_purchase_currency_id.id or self.env.company.currency_id.id
+        return {}
 
     def create_refund(self):
         self.ensure_one()
@@ -126,12 +149,12 @@ class PurchaseReturn(models.Model):
         for order_line in self.order_line:
             vals = {
                 'product_id': order_line.product_id.id,
-                'quantity': order_line.product_uom_qty if self.amount_total >= 0 else -order_line.product_uom_qty,
+                'quantity': order_line.product_qty if self.amount_total >= 0 else -order_line.product_qty,
                 'discount': order_line.discount,
-                'product_uom': order_line.product_uom.id,
+                'product_uom_id': order_line.product_uom.id,
                 'price_unit': order_line.price_unit,
                 'name': order_line.product_id.display_name,
-                'tax_ids': [(6, 0, order_line.tax_id.ids)],
+                'tax_ids': [(6, 0, order_line.taxes_id.ids)],
             }
 
             lines.append((0, 0, vals))
@@ -185,7 +208,7 @@ class PurchaseReturn(models.Model):
 
     picking_ids = fields.One2many('stock.picking', 'purchase_return_id', string='Transfers')
     move_ids = fields.One2many('account.move', 'purchase_return_id', string='Credit')
-
+    date_planned = fields.Datetime(string='Delivery Date', index=True)
     #
     # _sql_constraints = [
     #     ('date_order_conditional_required',
@@ -326,7 +349,7 @@ class PurchaseReturn(models.Model):
         picking_id = self.env["stock.picking"].create({
             'partner_id': self.partner_id.id,
             'origin': self.name,
-            'scheduled_date': fields.Date.today(),
+            'scheduled_date': self.date_planned,
             'picking_type_id': self.env['stock.picking.type'].search([('code', '=', 'outgoing')])[0].id,
             'location_id': self.warehouse_id.lot_stock_id.id,
             'location_dest_id': self.partner_id.property_stock_supplier.id,
@@ -420,15 +443,14 @@ class PurchaseReturnLine(models.Model):
                                copy=False)
     name = fields.Text(string='Description', required=True)
     sequence = fields.Integer(string='Sequence', default=10)
-
     invoice_lines = fields.Many2many('account.move.line', 'purchase_return_line_invoice_rel', 'order_line_id',
                                      'invoice_line_id', string='Invoice Lines', copy=False)
     price_unit = fields.Float('Unit Price', required=False, digits='Product Price', default=0.0)
     price_subtotal = fields.Float(string='Subtotal', compute="_compute_amount", readonly=True, store=True)
     price_tax = fields.Float(string='Total Tax', compute="_compute_amount", readonly=True, store=True)
     price_total = fields.Float(string='Total', compute="_compute_amount", readonly=True, store=True)
-    tax_id = fields.Many2many('account.tax', string='Taxes',
-                              domain=['|', ('active', '=', False), ('active', '=', True)])
+    taxes_id = fields.Many2many('account.tax', string='Taxes',
+                                domain=['|', ('active', '=', False), ('active', '=', True)])
     discount = fields.Float(string='Discount (%)', digits='Discount', default=0.0)
     product_id = fields.Many2one(
         'product.product', string='Product', required=1,
@@ -447,6 +469,10 @@ class PurchaseReturnLine(models.Model):
     order_partner_id = fields.Many2one(related='order_id.partner_id', store=True, string='Vendor', readonly=False)
     account_analytic_id = fields.Many2one('account.analytic.account', string='Analytic Account')
     analytic_tag_ids = fields.Many2many('account.analytic.tag', string='Analytic Tags')
+    date_planned = fields.Datetime(string='Scheduled Date', index=True)
+    partner_id = fields.Many2one('res.partner', related='order_id.partner_id', string='Partner', readonly=True,
+                                 store=True)
+    date_order = fields.Datetime(related='order_id.date_order', string='Order Date', readonly=True)
 
     def _default_company_id(self):
         if self.env.user.company_id:
@@ -456,20 +482,39 @@ class PurchaseReturnLine(models.Model):
     company_id = fields.Many2one('res.company', string='Company', required=True, default=_default_company_id)
 
     @api.onchange('product_id')
-    def _onchange_product_id(self):
-        self.price_unit = self.product_id.list_price
-        self.product_uom = self.product_id.uom_po_id
-        self.name = self.product_id.display_name if self.product_id.display_name else self.product_id.name
-        self._suggest_quantity()
+    def onchange_product_id(self):
+        if not self.product_id:
+            return
 
-    @api.depends('product_qty', 'discount', 'price_unit', 'tax_id')
+        # Reset date, price and quantity since _onchange_quantity will provide default values
+        self.date_planned = datetime.today().strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+        self.price_unit = self.product_qty = 0.0
+        self._product_id_change()
+        self._suggest_quantity()
+        self._onchange_quantity()
+
+    def _product_id_change(self):
+        if not self.product_id:
+            return
+
+        self.product_uom = self.product_id.uom_po_id or self.product_id.uom_id
+        product_lang = self.product_id.with_context(
+            lang=get_lang(self.env, self.partner_id.lang).code,
+            partner_id=self.partner_id.id,
+            company_id=self.company_id.id,
+        )
+        self.name = self._get_product_purchase_description(product_lang)
+
+        # self._compute_tax_id()
+
+    @api.depends('product_qty', 'discount', 'price_unit', 'taxes_id')
     def _compute_amount(self):
         """
         Compute the amounts of the SO line.
         """
         for line in self:
             price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-            taxes = line.tax_id.compute_all(price, False, line.product_qty, product=line.product_id,
+            taxes = line.taxes_id.compute_all(price, False, line.product_qty, product=line.product_id,
                                             partner=line.order_id.partner_id)
             line.update({
                 'price_tax': sum(t.get('amount', 0.0) for t in taxes.get('taxes', [])),
@@ -499,3 +544,63 @@ class PurchaseReturnLine(models.Model):
             self.product_uom = seller_min_qty[0].product_uom
         else:
             self.product_qty = 1.0
+
+    def _get_product_purchase_description(self, product_lang):
+        self.ensure_one()
+        name = product_lang.display_name
+        if product_lang.description_purchase:
+            name += '\n' + product_lang.description_purchase
+
+        return name
+
+    @api.model
+    def _get_date_planned(self, seller, po=False):
+        """Return the datetime value to use as Schedule Date (``date_planned``) for
+           PO Lines that correspond to the given product.seller_ids,
+           when ordered at `date_order_str`.
+
+           :param Model seller: used to fetch the delivery delay (if no seller
+                                is provided, the delay is 0)
+           :param Model po: purchase.order, necessary only if the PO line is
+                            not yet attached to a PO.
+           :rtype: datetime
+           :return: desired Schedule Date for the PO line
+        """
+        date_order = po.date_order if po else self.order_id.date_order
+        if date_order:
+            return date_order + relativedelta(days=seller.delay if seller else 0)
+        else:
+            return datetime.today() + relativedelta(days=seller.delay if seller else 0)
+
+    @api.onchange('product_qty', 'product_uom')
+    def _onchange_quantity(self):
+        if not self.product_id:
+            return
+        params = {'order_id': self.order_id}
+        seller = self.product_id._select_seller(
+            partner_id=self.partner_id,
+            quantity=self.product_qty,
+            date=self.order_id.date_order and self.order_id.date_order.date(),
+            uom_id=self.product_uom,
+            params=params)
+
+        if seller or not self.date_planned:
+            self.date_planned = self._get_date_planned(seller).strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+
+        if not seller:
+            if self.product_id.seller_ids.filtered(lambda s: s.name.id == self.partner_id.id):
+                self.price_unit = 0.0
+            return
+
+        price_unit = self.env['account.tax']._fix_tax_included_price_company(seller.price,
+                                                                             self.product_id.supplier_taxes_id,
+                                                                             self.taxes_id,
+                                                                             self.company_id) if seller else 0.0
+        if price_unit and seller and self.order_id.currency_id and seller.currency_id != self.order_id.currency_id:
+            price_unit = seller.currency_id._convert(
+                price_unit, self.order_id.currency_id, self.order_id.company_id, self.date_order or fields.Date.today())
+
+        if seller and self.product_uom and seller.product_uom != self.product_uom:
+            price_unit = seller.product_uom._compute_price(price_unit, self.product_uom)
+
+        self.price_unit = price_unit

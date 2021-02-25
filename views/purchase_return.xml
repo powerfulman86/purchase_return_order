@@ -105,7 +105,7 @@
                                             <field name="product_qty"/>
                                             <field name="product_uom"/>
                                             <field name="price_unit"/>
-                                            <field name="tax_id"/>
+                                            <field name="taxes_id"/>
                                             <field name="discount" string="Disc.%"
                                                    groups="product.group_discount_per_so_line" optional="show"/>
                                             <field name="price_subtotal" widget="monetary"
@@ -148,10 +148,10 @@
                                         />
                                         <field name="price_unit"/>
                                         <field
-                                                name="tax_id"
+                                                name="taxes_id"
                                                 widget="many2many_tags"
                                                 options="{'no_create': True}"
-                                                domain="[('type_tax_use','=','return'),('company_id','=',parent.company_id)]"
+                                                domain="[('type_tax_use','=','purchase'),('company_id','=',parent.company_id)]"
                                                 optional="show"
                                         />
                                         <field name="discount" string="Disc.%"
@@ -172,7 +172,7 @@
                                         <field name="price_tax" invisible="1"/>
                                         <field name="price_total" invisible="1"/>
                                         <field name="price_unit"/>
-                                        <field name="tax_id" invisible="1"/>
+                                        <field name="taxes_id" invisible="1"/>
                                         <templates>
                                             <t t-name="kanban-box">
                                                 <div t-attf-class="oe_kanban_card oe_kanban_global_click">
@@ -233,13 +233,19 @@
                             </page>
                             <page string="Other Info" name="other_information">
                                 <group>
-                                    <group name="return_group" string="Return ">
+                                    <group name="return_group" string="Return">
                                         <!--    <field name="picking_type_id"/> -->
-                                        <field name="warehouse_id"/>
                                         <field name="reference" readonly="1"
                                                attrs="{'invisible': [('reference', '=', False)]}"/>
                                         <field name="client_order_ref"/>
                                     </group>
+                                    <group name="warehouse" string="Delivery">
+                                        <field name="warehouse_id"/>
+                                    <label for="date_planned"/>
+                                    <div>
+                                        <field name="date_planned" attrs="{'readonly': [('state', 'not in', ('draft', 'sent'))]}"/>
+                                    </div>
+                                </group>
                                 </group>
                             </page>
                         </notebook>
